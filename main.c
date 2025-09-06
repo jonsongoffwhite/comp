@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "parser.h"
 #include "read.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -17,6 +18,10 @@ int main() {
       .cur_tok = data, .start_tok = data, .tokens = NULL, .token_count = 0};
 
   lex(&lexer);
+
+  Parser parser = {.tokens = lexer.tokens, .curr_tok = lexer.tokens};
+
+  parse(&parser);
 
   free(data);
   return 0;

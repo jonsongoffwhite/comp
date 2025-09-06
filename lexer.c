@@ -7,6 +7,7 @@
 
 void add_token(Lexer *lexer, Token type, char *val);
 bool is_type_name(char *str);
+bool is_fun_name(char *str);
 char *read_alnum(char **ptr);
 char *read_num(char **ptr);
 
@@ -60,6 +61,8 @@ int lex(Lexer *lexer) {
         Token tok;
         if (is_type_name(val)) {
           tok = TOK_TYPE;
+        } else if (is_fun_name(val)) {
+          tok = TOK_FUN;
         } else {
           tok = TOK_ID;
         }
@@ -73,6 +76,9 @@ int lex(Lexer *lexer) {
       break;
     }
   }
+
+  // Add EOF
+  add_token(lexer, TOK_EOF, NULL);
 
   printf("done lexing. token count: %zu\n", lexer->token_count);
 
@@ -110,9 +116,10 @@ char *read_num(char **ptr) {
 }
 
 bool is_type_name(char *str) {
-  return strcmp(str, "int") == 0 || strcmp(str, "str") == 0 ||
-         strcmp(str, "fun") == 0;
+  return strcmp(str, "int") == 0 || strcmp(str, "str") == 0;
 }
+
+bool is_fun_name(char *str) { return strcmp(str, "fun") == 0; }
 
 char *token_to_string(Token token) {
   switch (token) {
