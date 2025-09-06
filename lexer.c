@@ -48,17 +48,15 @@ int lex(Lexer *lexer) {
     case '"':
       // start string
       lexer->cur_tok++;
+      // non alphanumeric string values not allowed yet
+      char *val = read_alnum(&lexer->cur_tok);
+      add_token(lexer, TOK_STRING, val);
+      lexer->cur_tok++; // skip last "
       break;
     default:
       if (isalpha(*lexer->cur_tok)) {
-        char *start = lexer->cur_tok;
-        // advance lexer->cur_tok
-        while (isalnum(*(lexer->cur_tok)))
-          lexer->cur_tok++;
-        size_t len = lexer->cur_tok - start;
-        char *val = malloc(len + 1); // extra for \0
-        strncpy(val, start, len);
-        val[len] = '\0';
+        char *val = read_alnum(&lexer->cur_tok);
+        printf("VAL: %s\n", val);
         Token tok;
         if (is_type_name(val)) {
           tok = TOK_TYPE;
@@ -77,7 +75,8 @@ int lex(Lexer *lexer) {
 
   // Print tokens
   for (size_t i = 0; i < lexer->token_count; i++) {
-    printf("%s\n", token_to_string(lexer->tokens[i].type));
+    printf("%s: %s\n", token_to_string(lexer->tokens[i].type),
+           lexer->tokens[i].val);
   }
 
   return 0;
@@ -97,7 +96,8 @@ char *read_alnum(char **ptr) {
 }
 
 bool is_type_name(char *str) {
-  return strcmp(str, "int") == 0 || strcmp(str, "int") == 0;
+  return strcmp(str, "int") == 0 || strcmp(str, "str") == 0 ||
+         strcmp(str, "fun") == 0;
 }
 
 char *token_to_string(Token token) {
