@@ -8,6 +8,7 @@
 void add_token(Lexer *lexer, Token type, char *val);
 bool is_type_name(char *str);
 char *read_alnum(char **ptr);
+char *read_num(char **ptr);
 
 int lex(Lexer *lexer) {
   printf("lexing\n");
@@ -56,7 +57,6 @@ int lex(Lexer *lexer) {
     default:
       if (isalpha(*lexer->cur_tok)) {
         char *val = read_alnum(&lexer->cur_tok);
-        printf("VAL: %s\n", val);
         Token tok;
         if (is_type_name(val)) {
           tok = TOK_TYPE;
@@ -64,6 +64,9 @@ int lex(Lexer *lexer) {
           tok = TOK_ID;
         }
         add_token(lexer, tok, val);
+      } else if (isdigit(*lexer->cur_tok)) {
+        char *val = read_num(&lexer->cur_tok);
+        add_token(lexer, TOK_NUMBER, val);
       } else {
         lexer->cur_tok++;
       }
@@ -87,6 +90,17 @@ int lex(Lexer *lexer) {
 char *read_alnum(char **ptr) {
   char *start = *ptr;
   while (isalnum(**ptr))
+    (*ptr)++;
+  size_t len = *ptr - start;
+  char *val = malloc(len + 1); // extra for \0
+  strncpy(val, start, len);
+  val[len] = '\0';
+  return val;
+}
+
+char *read_num(char **ptr) {
+  char *start = *ptr;
+  while (isdigit(**ptr))
     (*ptr)++;
   size_t len = *ptr - start;
   char *val = malloc(len + 1); // extra for \0
