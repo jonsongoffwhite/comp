@@ -11,7 +11,8 @@ typedef enum {
   EXPR_INT_LITERAL,
   EXPR_STRING_LITERAL,
   EXPR_BINARY,
-  EXPR_ID
+  EXPR_ID,
+  EXPR_FUN_CALL
 } ExprType;
 
 typedef struct {
@@ -63,6 +64,11 @@ typedef struct {
   char *id;
 } IdExpr;
 
+typedef struct {
+  char *fun_id;
+  Expr *arg;
+} FunCallExpr;
+
 struct expr {
   ExprType type;
   union {
@@ -70,9 +76,17 @@ struct expr {
     StringLiteralExpr str_lit;
     BinaryExpr binary;
     IdExpr id;
+    FunCallExpr call;
   };
 };
 
+typedef struct {
+  Stmt **stmts;
+  size_t stmt_cap;
+  size_t stmt_count;
+} Prog;
+
+void add_stmt(Prog *prog, Stmt *stmt);
 void print_expr(Expr *expr);
 
 #endif // !AST_H

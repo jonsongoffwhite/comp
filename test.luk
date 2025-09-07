@@ -9,4 +9,4 @@ fun g<str s> = s + "hello";
 
 int z = 123 + 456 * 789 - 321 / 654;
 
-print f x;
+print "hello";

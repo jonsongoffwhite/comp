@@ -21,7 +21,7 @@ int main() {
 
   Parser parser = {.tokens = lexer.tokens, .curr_tok = lexer.tokens};
 
-  parse(&parser);
+  Prog *prog = parse(&parser);
 
   free(data);
   return 0;

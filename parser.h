@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "ast.h"
 #include "lexer.h"
 
 typedef struct {
@@ -13,7 +14,7 @@ typedef struct {
   float rhs;
 } BindPwr;
 
-int parse(Parser *parser);
+Prog *parse(Parser *parser);
 
 BindPwr op_bind_power(Token tok);
 

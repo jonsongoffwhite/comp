@@ -4,10 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-Expr *parse_exp(TokenData **curr, float min_bp);
+Expr *parse_expr(TokenData **curr, float min_bp);
 Expr *parse_atom(TokenData token);
 
-int parse(Parser *parser) {
+Prog *parse(Parser *parser) {
+  Prog *prog = malloc(sizeof(Prog));
+  *prog = (Prog){.stmts = NULL, .stmt_count = 0, .stmt_cap = 0};
+
   while (parser->curr_tok->type != TOK_EOF) {
 
     switch (parser->curr_tok->type) {
@@ -18,13 +21,13 @@ int parse(Parser *parser) {
 
       if ((++parser->curr_tok)->type != TOK_EQ) {
         printf("no equals '=' in variable declaration");
-        return 1;
+        return NULL;
       }
 
       // Rest goes to exp parser
       ++parser->curr_tok;
       TokenData **start_ptr = &parser->curr_tok;
-      Expr *expr = parse_exp(start_ptr, 0.0f);
+      Expr *expr = parse_expr(start_ptr, 0.0f);
       print_expr(expr);
       printf("\n");
       // Advance past semi colon
@@ -34,7 +37,7 @@ int parse(Parser *parser) {
       *stmt = (Stmt){.type = STMT_VAR_DECL,
                      .var_decl =
                          (VarDeclStmt){.type = type, .id = id, .value = expr}};
-
+      add_stmt(prog, stmt);
       break;
     }
     case TOK_FUN: {
@@ -46,7 +49,7 @@ int parse(Parser *parser) {
       if ((++parser->curr_tok)->type != TOK_LBRAC) {
         printf("no '<' in function declaration\n");
         printf("got: %s\n", token_to_string(parser->curr_tok->type));
-        return 1;
+        return NULL;
       }
 
       char *param_type = ((++parser->curr_tok)->val);
@@ -55,17 +58,25 @@ int parse(Parser *parser) {
       if ((++parser->curr_tok)->type != TOK_RBRAC) {
         printf("no '>' in function declaration\n");
         printf("got: %s\n", token_to_string(parser->curr_tok->type));
-        return 1;
+        return NULL;
       }
 
       if ((++parser->curr_tok)->type != TOK_EQ) {
         printf("no '=' in function declaration\n");
-        return 1;
+        return NULL;
       }
 
       parser->curr_tok++;
       TokenData **start_ptr = &parser->curr_tok;
-      Expr *expr = parse_exp(start_ptr, 0.0f);
+      Expr *expr = parse_expr(start_ptr, 0.0f);
+
+      Stmt *stmt = malloc(sizeof(Stmt));
+      *stmt = (Stmt){.type = STMT_FUN_DECL,
+                     .fun_decl = (FunDeclStmt){.id = id,
+                                               .param_type = param_type,
+                                               .param_id = param_id,
+                                               .value = expr}};
+      add_stmt(prog, stmt);
 
       print_expr(expr);
       printf("\n");
@@ -73,24 +84,40 @@ int parse(Parser *parser) {
       parser->curr_tok++;
       break;
     }
-    case TOK_ID:
-      // parse expression statement (call)
+    case TOK_ID: {
+      // TODO: Handle other expr stmts than raw fun call
       printf("expression statement\n");
-      while (parser->curr_tok->type != TOK_SEMICOL)
-        parser->curr_tok++;
+      char *id = (parser->curr_tok)->val;
+      printf("id: %s\n", id);
+      parser->curr_tok++;
+      TokenData **start_ptr = &parser->curr_tok;
+      Expr *expr = parse_expr(start_ptr, 0.0f);
+
+      Expr *fun_call = malloc(sizeof(Expr));
+      *fun_call = (Expr){.type = EXPR_FUN_CALL,
+                         .call = (FunCallExpr){.fun_id = id, .arg = expr}};
+      printf("full fun expr\n");
+      print_expr(fun_call);
+      printf("\n");
+
+      Stmt *stmt = malloc(sizeof(Stmt));
+      *stmt = (Stmt){.type = STMT_EXPR, .expr = (ExprStmt){.value = fun_call}};
+
+      add_stmt(prog, stmt);
+
       parser->curr_tok++;
       break;
+    }
     default:
       // invalid start of statement
       printf("invalid start of statement\n");
-      return 1;
+      return NULL;
     }
   }
-  return 0;
+  return prog;
 }
 
-// TODO: Implement Pratt
-Expr *parse_exp(TokenData **curr, float min_bp) {
+Expr *parse_expr(TokenData **curr, float min_bp) {
   Expr *lhs = parse_atom(**curr);
   (*curr)++;
 
@@ -103,7 +130,7 @@ Expr *parse_exp(TokenData **curr, float min_bp) {
       break;
     }
     (*curr)++;
-    Expr *rhs = parse_exp(curr, bp.rhs);
+    Expr *rhs = parse_expr(curr, bp.rhs);
 
     // Create binary
     Expr *expr = malloc(sizeof(Expr));
@@ -118,6 +145,8 @@ Expr *parse_exp(TokenData **curr, float min_bp) {
 }
 
 Expr *parse_atom(TokenData token) {
+  // TODO: Handle error when atom is expected but none there
+  // TODO: Make function call a valid atom? (can contain expressions within)
   Expr *expr = malloc(sizeof(Expr));
   switch (token.type) {
   case TOK_STRING:
@@ -132,6 +161,7 @@ Expr *parse_atom(TokenData token) {
     *expr = (Expr){.type = EXPR_ID, .id = (IdExpr){.id = token.val}};
     break;
   default:
+    // printf("unexpected atom: %s\n", token_to_string(token.type));
     free(expr);
     return NULL;
   }
