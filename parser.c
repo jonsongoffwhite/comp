@@ -2,16 +2,17 @@
 #include "ast.h"
 #include "lexer.h"
 #include <stdio.h>
+#include <stdlib.h>
 
-Expr *parse_exp(TokenData *start);
+Expr *parse_exp(TokenData **curr, float min_bp);
+Expr *parse_atom(TokenData token);
 
 int parse(Parser *parser) {
   while (parser->curr_tok->type != TOK_EOF) {
 
     switch (parser->curr_tok->type) {
-    case TOK_TYPE:
+    case TOK_TYPE: {
       // parse variable declaration
-      printf("variable declaration\n");
       char *type = parser->curr_tok->val;
       char *id = (++parser->curr_tok)->val;
 
@@ -21,22 +22,28 @@ int parse(Parser *parser) {
       }
 
       // Rest goes to exp parser
-      parse_exp(++parser->curr_tok);
-
-      // TODO: evaluate rest as expression
-
-      while (parser->curr_tok->type != TOK_SEMICOL) {
-        parser->curr_tok++;
-      }
+      ++parser->curr_tok;
+      TokenData **start_ptr = &parser->curr_tok;
+      Expr *expr = parse_exp(start_ptr, 0.0f);
+      print_expr(expr);
+      // Advance past semi colon
       parser->curr_tok++;
+
+      Stmt *stmt = malloc(sizeof(Stmt));
+      *stmt = (Stmt){.type = STMT_VAR_DECL,
+                     .var_decl =
+                         (VarDeclStmt){.type = type, .id = id, .value = expr}};
+
       break;
-    case TOK_FUN:
+    }
+    case TOK_FUN: {
       // parse function declaration
       printf("function declaration\n");
       while (parser->curr_tok->type != TOK_SEMICOL)
         parser->curr_tok++;
       parser->curr_tok++;
       break;
+    }
     case TOK_ID:
       // parse expression statement (call)
       printf("expression statement\n");
@@ -53,10 +60,72 @@ int parse(Parser *parser) {
   return 0;
 }
 
-Expr *parse_exp(TokenData *start) {
-  while (start->type != TOK_SEMICOL) {
-    printf("parse exp tok: %s: %s\n", token_to_string(start->type), start->val);
-    start++;
+// TODO: Implement Pratt
+Expr *parse_exp(TokenData **curr, float min_bp) {
+  Expr *lhs = parse_atom(**curr);
+  (*curr)++;
+
+  for (;;) {
+    Token op = (*curr)->type;
+    if (op == TOK_SEMICOL)
+      break;
+    BindPwr bp = op_bind_power(op);
+    if (bp.lhs < min_bp) {
+      break;
+    }
+    (*curr)++;
+    Expr *rhs = parse_exp(curr, bp.rhs);
+
+    // Create binary
+    Expr *expr = malloc(sizeof(Expr));
+    *expr = (Expr){.type = EXPR_BINARY,
+                   .binary = (BinaryExpr){.op = op, .left = lhs, .right = rhs}};
+    lhs = expr;
   }
-  return NULL;
+
+  print_expr(lhs);
+  printf("\n");
+  return lhs;
+}
+
+Expr *parse_atom(TokenData token) {
+  Expr *expr = malloc(sizeof(Expr));
+  switch (token.type) {
+  case TOK_STRING:
+    *expr = (Expr){.type = EXPR_STRING_LITERAL,
+                   .str_lit = (StringLiteralExpr){.val = token.val}};
+    break;
+  case TOK_NUMBER:
+    *expr = (Expr){.type = EXPR_INT_LITERAL,
+                   .int_lit = (IntLiteralExpr){.val = token.val}};
+    break;
+  case TOK_ID:
+    *expr = (Expr){.type = EXPR_ID, .id = (IdExpr){.id = token.val}};
+    break;
+  default:
+    free(expr);
+    return NULL;
+  }
+  return expr;
+}
+
+BindPwr op_bind_power(Token tok) {
+  float lhs, rhs;
+  switch (tok) {
+  case TOK_PLUS:
+  case TOK_MINUS:
+    lhs = 1.0;
+    rhs = 1.1;
+    break;
+  case TOK_ASTERISK:
+  case TOK_FSLASH:
+    lhs = 2.0;
+    rhs = 2.1;
+    break;
+  default:
+    lhs = 0.0f;
+    rhs = 0.0f;
+    break;
+  };
+  return (BindPwr){.lhs = lhs, .rhs = rhs};
 }

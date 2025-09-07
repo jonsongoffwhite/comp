@@ -73,4 +73,6 @@ struct expr {
   };
 };
 
+void print_expr(Expr *expr);
+
 #endif // !AST_H
