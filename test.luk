@@ -5,4 +5,8 @@ str y = "hi";
 
 fun f<int a> = a + 2;
 
+fun g<str s> = s + "hello";
+
+int z = 123 + 456 * 789 - 321 / 654;
+
 print f x;

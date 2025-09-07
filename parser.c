@@ -26,6 +26,7 @@ int parse(Parser *parser) {
       TokenData **start_ptr = &parser->curr_tok;
       Expr *expr = parse_exp(start_ptr, 0.0f);
       print_expr(expr);
+      printf("\n");
       // Advance past semi colon
       parser->curr_tok++;
 
@@ -39,8 +40,36 @@ int parse(Parser *parser) {
     case TOK_FUN: {
       // parse function declaration
       printf("function declaration\n");
-      while (parser->curr_tok->type != TOK_SEMICOL)
-        parser->curr_tok++;
+      parser->curr_tok++;
+      char *id = (++parser->curr_tok->val);
+
+      if ((++parser->curr_tok)->type != TOK_LBRAC) {
+        printf("no '<' in function declaration\n");
+        printf("got: %s\n", token_to_string(parser->curr_tok->type));
+        return 1;
+      }
+
+      char *param_type = ((++parser->curr_tok)->val);
+      char *param_id = ((++parser->curr_tok)->val);
+
+      if ((++parser->curr_tok)->type != TOK_RBRAC) {
+        printf("no '>' in function declaration\n");
+        printf("got: %s\n", token_to_string(parser->curr_tok->type));
+        return 1;
+      }
+
+      if ((++parser->curr_tok)->type != TOK_EQ) {
+        printf("no '=' in function declaration\n");
+        return 1;
+      }
+
+      parser->curr_tok++;
+      TokenData **start_ptr = &parser->curr_tok;
+      Expr *expr = parse_exp(start_ptr, 0.0f);
+
+      print_expr(expr);
+      printf("\n");
+
       parser->curr_tok++;
       break;
     }
